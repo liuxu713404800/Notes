@@ -1,0 +1,25 @@
+Checkpoint技术:
+	缓冲池的目的是为了协调CPU与磁盘速度的鸿沟，所有页的更新操作都是在缓冲池中完成，然后刷新到磁盘的。然而不能在每次页发生变化时就将变化刷新到磁盘，因为这样代价太高了。
+	同时为了数据库宕机时能够恢复，数据库一般采用先写日志，再修改页的策略。数据库宕机后，通过redo日志恢复数据。然而重做日志不能无限大，否则会造成数据库恢复时间过长。
+
+	因此Checkpoint技术的目的是解决以下问题：
+	1.缩短数据库的恢复时间；
+	2.缓冲池不够用时，将脏页说新到磁盘；
+	3.重做日志不可用时，刷新脏页；
+
+	当数据库放生宕机时，数据库不需要重做所有的日志，因为Checkpoint之前的页已刷新到磁盘。同时，缓冲池不够用时，针对根据LRU算法溢出的页，强行执行Checkpoint，将脏页刷新到磁盘。
+
+	InnoDB存储引擎包含两种Checkpoint：
+		Sharp Checkpoint:发生在数据库关闭时，将全部脏页刷新到磁盘，这是默认的工作方式，即参数innodb_fast_shutdown=1。但是全部刷新性能会有比较严重的影响。
+		Fuzzy Checkpoint:只刷新一部分脏页，InnoDB运行期间的刷新策略。以下几种情况有可能发生Fuzzy Checkpoint。
+			1.Master Thread Checkpoint:
+			Master Thread 以每秒或者每十秒从缓冲池中刷新出一定比例的脏页到磁盘；
+			2.FLUSH_LRU_LIST Checkpoint:
+			InnoDB存储引擎需要检查LRU列表中差不多100个空闲页可用。若没有的话，将从LRU列表尾端移除，发现脏页，发生Checkpoint；
+			3.Async/Sync Flush Checkpoint: 重做日志文件不可用，需要强制将一些脏页刷回到磁盘；
+			4.Dirty Page too much Checkpoint:
+			脏页数量太多，导致InnoDB需要强行刷新脏页，通过innodb_max_dirty_pages_pct参数控制，默认为75；
+			mysql> show variables like 'innodb_max_dirty_pages_pct'\G;
+			*************************** 1. row ***************************
+			Variable_name: innodb_max_dirty_pages_pct
+			        Value: 75.000000

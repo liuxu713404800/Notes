@@ -1,0 +1,49 @@
+CPU的配置：
+    InnoDB适用于OLTP数据库应用，特点如下：
+        用户操作并发量大；
+        事务处理时间比较短；
+        查询语句比较简单，一般走索引；
+        复杂查询较少；
+    可以看出，OLTP是IO密集型操作，对CPU要求并不高，但是对磁盘要求比较高；相对的，OLAP型事务对CPU要求比较高；
+    当CPU支持多核时，通过调整参数innodb_read_io_threads和innodb_write_io_thread，一般增加至cpu核数，来提高IO性能；
+
+内存：
+    无须多说，能缓存更多的数据自然就读取就快；
+    可以通过比较物理裁判读取和内存读取比例来判断缓冲池命中率，通常Innodb村塾引擎缓冲池命中率不应该小于99%，如小于，说明当前数据库的内存达到瓶颈了；
+    mysql> show GLOBAL STATUS LIKE "innodb%read%"\G;
+            *************************** 1. row ***************************
+            Variable_name: Innodb_buffer_pool_read_ahead_rnd
+                    Value: 0
+            *************************** 2. row ***************************
+            Variable_name: Innodb_buffer_pool_read_ahead
+                    Value: 99519
+            *************************** 3. row ***************************
+            Variable_name: Innodb_buffer_pool_read_ahead_evicted
+                    Value: 1037
+            *************************** 4. row ***************************
+            Variable_name: Innodb_buffer_pool_read_requests
+                    Value: 5986384382
+            *************************** 5. row ***************************
+            Variable_name: Innodb_buffer_pool_reads
+                    Value: 334416
+            *************************** 6. row ***************************
+            Variable_name: Innodb_data_pending_reads
+                    Value: 0
+            *************************** 7. row ***************************
+            Variable_name: Innodb_data_read
+                    Value: 7242682880
+            *************************** 8. row ***************************
+            Variable_name: Innodb_data_reads
+                    Value: 442738
+            *************************** 9. row ***************************
+            Variable_name: Innodb_pages_read
+                    Value: 442053
+            *************************** 10. row ***************************
+            Variable_name: Innodb_rows_read
+                    Value: 2667169865
+            10 rows in set (0.11 sec)
+     命中率： 4/(4+2+5)，数字代表上述序号；
+
+ 硬盘：
+    传统的机械硬盘容量大，可靠性较好，但是缺点是速度慢，尤其是随机读时开销极为庞大；
+    新型固态硬盘读写速度非常快，但是容量小，价格昂贵；

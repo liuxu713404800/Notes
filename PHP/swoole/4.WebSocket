@@ -1,0 +1,45 @@
+1.WebSocket是什么？ 
+WebSocket是HTML5规范提出的一种协议，和HTTP协议是并存的两种协议。
+
+2.WebSocket与Socket的关系
+Socket其实并不是一个协议，而是为了方便使用TCP或UDP而抽象出来的一层，是位于应用层和传输控制层之间的一组接口。划重点，不是协议，是接口
+当两台主机通信时，必须通过Socket连接，Socket则利用TCP/IP协议建立TCP连接。TCP连接则更依靠于底层的IP协议，IP协议的连接则依赖于链路层等更低层次。
+
+所以WebSocket一个应用层协议；Socket是方便用户开发一组接口。 
+3.WebSocketServer介绍
+WebSockerServer是在swoole_http_server基础上增加了协议解析；并新增了push方法用于发送websocket数据
+完成的WebSocket协议请求会被解析并封装在frame对象内
+
+4.如何判断连接是否为WebSocket客户端
+通过使用$server->connection_info($fd)获取连接信息，返回的数组中有一项为 websocket_status，根据此状态可以判断是否为WebSocket客户端。
+WEBSOCKET_STATUS_CONNECTION = 1，连接进入等待握手
+WEBSOCKET_STATUS_HANDSHAKE = 2，正在握手
+WEBSOCKET_STATUS_FRAME = 3，已握手成功等待浏览器发送数据帧
+
+5.回调函数
+WebSocket除了接收Swoole\Server和Swoole\Http\Server基类的回调函数外，额外增加了3个回调函数设置。
+onMessage回调函数为必选
+onOpen回调函数为可选
+onHandShake回调函数为可选
+1） onMessage
+当服务器收到来自客户端的数据帧时会回调此函数。
+function onMessage(swoole_websocket_server  $server, swoole_websocket_frame $frame)
+$frame是swoole_websocket_frame对象，包含了客户端发来的数据帧信息
+----------------------------------------------------------------
+swoole_websocket_frame共有4个属性，分别是：
+$frame->fd，客户端的socket id，使用$server->push推送数据时需要用到
+$frame->data，数据内容，可以是文本内容也可以是二进制数据，可以通过opcode的值来判断
+$frame->opcode，WebSocket的OpCode类型，可以参考WebSocket协议标准文档
+$frame->finish， 表示数据帧是否完整，一个WebSocket请求可能会分成多个数据帧进行发送（底层已经实现了自动合并数据帧，现在不用担心接收到的数据帧不完整）
+需要注意的是：$data 如果是文本类型，编码格式必然是UTF-8，这是WebSocket协议规定的
+2）onOpen
+当WebSocket客户端与服务器建立连接并完成握手后会回调此函数。
+function onOpen(swoole_websocket_server $svr, swoole_http_request $req)
+$req 是一个Http请求对象，包含了客户端发来的握手请求信息
+onOpen事件函数中可以调用push向客户端发送数据或者调用close关闭连接
+3）onHandShake
+WebSocket建立连接后进行握手。WebSocket服务器已经内置了handshake，如果用户希望自己进行握手处理，可以设置onHandShake事件回调函数。
+function onHandShake(swoole_http_request $request, swoole_http_response $response);
+onHandShake事件回调是可选的
+设置onHandShake回调函数后不会再触发onOpen事件，需要应用代码自行处理
+onHandShake中必须调用response->status设置状态码为101并调用end响应, 否则会握手失败

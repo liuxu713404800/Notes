@@ -1,0 +1,14 @@
+页是InnoDB存储引擎管理数据库的最小磁盘单位。
+数据页又以下7个部分构成：File Header,Page Header,Infimun和Supernum Records,User Records,Free Space,Page Directory,File Trailer
+File Header:
+	用来记录一些头信息(页在表空间中的信息)，如页在表空间中的偏移量，上下页信息等等，共占用38个字节；
+Page Header:
+	用来记录页本身信息(页自身的信息)，如页在页中记录数，页中删除数，最后插入位置等等，共占用56个字节；
+Infimun和Supernum Records：
+	记录了页的边界，分别在页头和页尾；在页被创建时建立并且永远不会被删除；
+User Records和Free Space：
+	User Records为实际存储的行的记录内容；Free Space为页中剩余空间的大小，一条记录被删除后，空间会被加入到空闲链表中；
+Page Directory：
+	可以认为是页中记录的相对位置，注意，是存放页的相对位置而不是偏移量（没有看太懂，意思应该是像记录的一个字典一样）；
+File Trailer：
+	检测页是否写入磁盘的标志

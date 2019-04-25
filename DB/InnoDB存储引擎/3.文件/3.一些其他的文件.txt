@@ -1,0 +1,33 @@
+套接字文件：
+	一般需要一个套接字（scoket）文件
+	mysql> show variables like "socket";
+	+---------------+---------------------------+
+	| Variable_name | Value                     |
+	+---------------+---------------------------+
+	| socket        | /var/lib/mysql/mysql.sock |
+	+---------------+---------------------------+
+
+pid文件：
+	MySQL会将自己的进程ID写入一个文件中，即为pid文件；
+	mysql> show variables like "pid_file";
+	+---------------+----------------------------+
+	| Variable_name | Value                      |
+	+---------------+----------------------------+
+	| pid_file      | /var/run/mysqld/mysqld.pid |
+	+---------------+----------------------------+
+
+表结构定义文件：
+	MySQL中每个表都会产生一个以frm为后缀的文件，定义该表的结构定义；
+
+InnoDB存储引擎文件：
+	1.表空间文件：
+		用户可以用多个文件组成表空间，通过innodb_data_file_path设定，如 innodb_data_file_path=/db/data1:2000M;/db/data2:2000M:autoextend；
+		默认情况下，InnoDB会将所有的文件存储在一个表空间内，这样的风险比较高，所以通过innodb_file_per_table参数将每一个表空间单独放在一个文件内
+		mysql> show variables like "innodb_file_per_table";
+		+-----------------------+-------+
+		| Variable_name         | Value |
+		+-----------------------+-------+
+		| innodb_file_per_table | ON    |
+		+-----------------------+-------+
+	2.重做日志文件：
+		ib_logfile0和ib_logfile1两个文件，即为重做日志文件。重做日志文件不宜设置过大，否则容易引起宕机恢复时时间过长；

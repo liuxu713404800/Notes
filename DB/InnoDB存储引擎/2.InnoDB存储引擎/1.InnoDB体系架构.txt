@@ -1,0 +1,74 @@
+后台线程：
+    InnoDB是多线程模型，后台有多个不同的线程。
+    1.Master Thread:
+        后台非常核心的线程，主要负责则将缓冲池中的数据一步刷新到磁盘，保证数据的一致性，包括脏页的刷新，合并插入缓存，UNDO页回收等等；
+        个人理解为核心调度线程
+    2.IO Thread：
+        在InnoDB存储引擎大量使用了AIO（Async IO）来处理写IO请求，极大提高了数据库的性能；
+        总共有四个IO Thread:read、write、insert buffer 和 log
+        从1.0.x开始，read thread和write thread 增大到四个，并且可以使用innodb_read_io_threads和innodb_write_io_threads设置；
+        mysql> show variables like 'innodb_version';
+        +----------------+--------+
+        | Variable_name  | Value  |
+        +----------------+--------+
+        | innodb_version | 5.7.22 |
+        +----------------+--------+
+        1 row in set (0.01 sec)
+
+        mysql> show variables like 'innodb_%io_threads';
+        +-------------------------+-------+
+        | Variable_name           | Value |
+        +-------------------------+-------+
+        | innodb_read_io_threads  | 4     |
+        | innodb_write_io_threads | 4     |
+        +-------------------------+-------+
+        2 rows in set (0.00 sec)
+    3.Purge Thread：
+        事务被提交后，Purge Thread回收已经使用被分配的undo页；
+        1.1版本之前，purge操作在master中完成；1.1开始，purge操作独立到单独的线程中进行，但是只能即使将innodb_purge_threads设置大于1，InnoDB启动时也会将其修改为1；1.2版本开始，支持多个Purge Thread；
+    4.Page Cleaner Thread：
+        1.2版本中引入，将之前版本中脏页的刷新操作放入这个单独的新进程中完成，减轻master的压力
+
+
+内存：
+    1.缓冲池：
+        缓冲池是一块内存区域。数据库在读取页时，先将从磁盘读取的页放到缓冲池当中，这个过程称为“FIX”在缓冲池中，下一次读取的话先判断该页是否在缓冲池中，如果在，直接读取，否则，读取磁盘页。
+        对于更新操作而言，首先修改缓冲池中的页，然后以一定频率刷新到磁盘上。注意，并不是每次更新都会有触发刷新，而是通过Checkpoint机制刷回磁盘；
+        缓冲池的大小由innodb_buffer_pool_size来设置：
+        mysql> show variables like 'innodb_buffer_pool_size'\G;
+        *************************** 1. row ***************************
+        Variable_name: innodb_buffer_pool_size
+                Value: 2147483648
+
+        缓冲池中的缓存数据页类型有：索引页、数据页、undo页、插入缓冲、自适应哈希索引、InnoDB存储信息锁、数据字典等等；
+        从1.0.x开始，可以设通过参数设置得到多个缓冲池实例，每个页根据哈希值平均分配到不同的缓冲池实例中，
+        减少数据库内部的资源竞争，增加数据库的并发能力；
+        mysql> show variables like 'innodb_buffer_pool_instances'\G;
+        *************************** 1. row ***************************
+        Variable_name: innodb_buffer_pool_instances
+                Value: 4
+
+    2.LRU List、Free List和Flush List
+        InnoDB通过LRU算法来进行缓冲池管理。但是稍有不同的是，InnoDB存储引擎对传统LRU算法进行了一些优化，加入了midpoint位置。读取到新页时，并不直接放在LRU List的首部，而是放在midpoint insertion strategy规定的位置，默认为列表长度的5/8处，可以通过innodb_old_blocks_pct对此进行设置。在此位置之后的列表称为old列表，在此之前的列表可以称为new列表，可以简单理解为new列表为最活跃的热点列表。
+        mysql> show variables like 'innodb_old_blocks_pct'\G;
+        *************************** 1. row ***************************
+        Variable_name: innodb_old_blocks_pct
+                Value: 37
+        采用这种策略的原因是为了防止数据库某些操作（如全表扫描）需要访问大量数据页的时候，如果直接将页放在列表的首部，那么本次操作有可能会将大量的缓冲池中的热点数据页冲出缓冲池，保留本次的结果。但是本次操作的结果通常仅仅是本次操作有效，并不是热点数据，真正的热点数据被已经不在缓冲池中，下次访问时需要再次读取磁盘。
+
+        仅有上述策略是不够的，还需要一定的算法来保证数据页从old列表到new列表的迁移，控制迁移时间的参数为innodb_old_blocks_time，表示数据读取到mid位置后多久才会被加入LRU热端。
+        mysql> show variables like 'innodb_old_blocks_time'\G;
+        *************************** 1. row ***************************
+        Variable_name: innodb_old_blocks_time
+                Value: 1000
+        缓冲池中插入页时，会首先检查Free列表。如果Free页中有空闲页，那么会将该页从Free列表中删除，加入LRU中；否则会淘汰LRU列表末尾的页，将空间分配给新页。
+
+        当LRU页被修改后，会产生脏页，Flush List即为脏页列表页。脏页同时存在于LRU列表和Flush列表中，但是两者互不影响：LRU列表页负责性能，Flush列表页负责管理页面刷新
+
+    3.重做日志缓冲（redo log buffer）:
+        重做日志文件时为了数据库恢复的物理文件，其中保存了数据库的变更操作信息。通过重做日志文件通常是通过重做（REDO）或者是回退（UNDO）实现的。同样的，InnoDB也是先先将重做日志写入缓存，然后以某种策略刷入磁盘的。
+        在以下三种情况下，会将重做日志缓冲中的内容刷新到外部磁盘的重做日志文件中：
+            1.Master Thread 每一秒将重做日志缓冲刷新到重做日志文件；
+            2.每个事务提交时会将重做日志缓冲刷新到重做日志文件；
+            3.当重做日志缓冲池剩余空间小于1/2时，重做日志缓冲刷新到重做日志文件。
+    4.额外内存池：没有看懂，就不写了
