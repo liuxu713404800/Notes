@@ -1,0 +1,80 @@
+1.获取镜像
+命令的格式为:docker [image] pull NAME [:TAG].
+例如获得一个Ubuntu18.04系统的基础镜像可以使用如下的命令
+$ docker pull ubuntu:18.04
+18.04: Pulling from library/ubuntu
+f476d66f5408: Pull complete
+8882c27f669e: Pull complete
+d9af21273955: Pull complete
+f5029279ec12: Pull complete
+Digest: sha256:d26d529daa4d8567167181d9d569f2a85da3c5ecaf539cace2c6223355d69981
+Status: Downloaded newer image for ubuntu:18.04
+对于Docker镜像来说，如果不显式指定TAG, 则默认会选择latest标签，这会下载仓库中最新版本的镜像。
+如果不显示指定镜像仓库服务器的情况下，Docker会从默认的注册服务器的仓库中下载。docker pull ubuntu:18.04实际上相当docker pull registry.hub.docker.com/ubuntu:18.04
+如果使用第三方镜像，需要显示指定仓库地址。如从网易蜂巢中获取ubuntu:18.04镜像，命令如下：docker pull hub.c.163.com/public/ubuntu:18.04
+下载镜像到本地后，即可随时使用该镜像了，例如利用该镜像创建一个容器，在其中运行bash应用:
+$ docker run -it ubuntu:18.04 bash
+root@7421a014091e:/# echo "Hello Docker"
+Hello Docker
+root@7421a014091e:/#
+
+2.查看镜像信息
+可以使用docker images或docker image ls 命令可以列出本地主机上已有镜像的基本信息。
+docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              18.04               d131e0fa2585        8 days ago          102MB
+
+使用tag命令可以为镜像添加新的标签
+$ docker tag ubuntu:18.04 myubuntu:18.04
+$ Docker docker image ls
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              18.04               d131e0fa2585        8 days ago          102MB
+myubuntu            18.04               d131e0fa2585        8 days ago          102MB
+可以看到，两个镜像的ID是一致的，它们实际上指向了同一个镜像文件，只是别名不同而已
+
+使用inspect命令查看详细信息
+$ docker inspect ubuntu:18.04
+[
+    {
+        "Id": "sha256:d131e0fa2585a7efbfb187f70d648aa50e251d9d3b7031edf4730ca6154e221e",
+        "RepoTags": [
+            "myubuntu:18.04",
+            "ubuntu:18.04"
+        ],
+        "RepoDigests": [
+            "ubuntu@sha256:d26d529daa4d8567167181d9d569f2a85da3c5ecaf539cace2c6223355d69981"
+        ],
+        "Parent": "",
+        "Comment": "",
+        "Created": "2019-04-26T22:21:05.100534088Z",
+		...
+]
+对于返回的内容，如果只需要其中的一项的话，那么可以使用-f来指定：
+$ docker inspect -f {{.Created}} ubuntu:18.04
+2019-04-26T22:21:05.100534088Z
+
+使用history命令查看镜像历史，该命令将列出各层的创建信息。
+$ docker history ubuntu:18.04
+IMAGE               CREATED             CREATED BY                                      SIZE                COMMENT
+d131e0fa2585        8 days ago          /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B
+<missing>           8 days ago          /bin/sh -c mkdir -p /run/systemd && echo 'do…   7B
+<missing>           8 days ago          /bin/sh -c rm -rf /var/lib/apt/lists/*          0B
+<missing>           8 days ago          /bin/sh -c set -xe   && echo '#!/bin/sh' > /…   745B
+<missing>           8 days ago          /bin/sh -c #(nop) ADD file:7ce84f13f11609a50…   102MB
+
+3.搜寻镜像
+语法为docker search [option] keyword。 支持的命令选项主要包括：
+-f, --filter filter: 过滤输出内容；
+--format s七ring: 格式化输出内容；
+--limit int：限制输出结果个数， 默认为25个；
+--no-trunc: 不截断输出结果
+例如搜索官方提供的带ubuntu关键字的镜像:
+$ docker search --filter=is-official=true ubuntu
+NAME                 DESCRIPTION                                     STARS               OFFICIAL            AUTOMATED
+ubuntu               Ubuntu is a Debian-based Linux operating sys…   9487                [OK]
+ubuntu-upstart       Upstart is an event-based replacement for th…   97                  [OK]
+neurodebian          NeuroDebian provides neuroscience research s…   56                  [OK]
+ubuntu-debootstrap   debootstrap --variant=minbase --components=m…   40                  [OK]
+
+4.删除和清理镜像
+
