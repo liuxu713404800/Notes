@@ -1,0 +1,60 @@
+容器是Docker的另一个核心概念，容器是镜像的一个运行的实例。镜像是静态的只读文件，而容器带有运行时需要的可写文件层；同时，容器中的应用进程处于运行状态。
+如果认为虚拟机是模拟运行的一整套操作系统（包括内核、应用运行态环境和其他系统环境）和跑在上面的应用。那么Docker容器就是独立运行的一个（或一组）应用，以及它们必需的运行环境。
+
+1.新建一个容器
+$ docker create -it ubuntu:18.04
+5beddaa6d8976512eb3d7fd3efe68223cf04a435fa739ead0c14502e6b3a7b4a
+$docker ps -a
+CONTAINER ID        IMAGE                            COMMAND                  CREATED             STATUS                         PORTS                                NAMES
+5beddaa6d897        ubuntu:18.04                     "/bin/bash"              15 seconds ago      Created                                                             wonderful_robinson
+1f37ee503732        centos7-x86_64-minimal:lastest   "/bin/bash"              45 minutes ago      Exited (0) 44 minutes ago                                           wonderful_sanderson
+
+使用docker create命令新建的容器处于停止状态可以使用docker start命令来启动它
+$ docker  start 5beddaa6d897
+5beddaa6d897
+
+也可以直接使用docker run命令来创建并启动容器
+
+更多的时候，我们需要让docker容器在后台以守护形式运行，需要通过添加-d参数来实现
+$ docker run -d centos7-x86_64-minimal:lastest /bin/bash -c "echo 123"
+72e075b364a65388bb2eda811ae29d8cd04983e9084a6ad1f7e21a8b2876e8b8
+
+查看容器输出需要docker logs命令
+
+
+2.停止容器
+暂停容器可以使用docker pause
+$ docker run --name test -d -it ubuntu:18.04 bash
+def3cfa8a671ae2e467bb28a99983323c83bc836e5521b491bb76c0a509d83b1
+$ docker pause test
+test
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                   PORTS               NAMES
+def3cfa8a671        ubuntu:18.04        "bash"              17 seconds ago      Up 15 seconds (Paused)                       test
+
+终止容器：docker stop
+$ docker stop test
+test
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+
+终止后的容器，可以通过docker start来重新启动
+
+
+
+3.进入容器
+在使用-d参数时，容器启动后会进入后台，用户无法看到容器中的信息，也无法进行操作。
+
+使用docker attach命令可以进入容器
+$ docker start def3cfa8a671
+def3cfa8a671
+$ docker attach def3cfa8a671
+root@def3cfa8a671:/#
+然而使用attach命令有时候并不方便。当多个窗口同时attach到同一个容器的时候，所有窗口都会同步显示；当某个窗口因命令阻塞时，其他窗口也无法执行操作了。
+
+使用docker exec命令
+$ docker start def3cfa8a671
+def3cfa8a671
+$ docker exec -it def3cfa8a671 /bin/bash
+root@def3cfa8a671:/#
+这种方式可以在不影响容器内其他应用的前提下，用户可以与容器进行交互。
