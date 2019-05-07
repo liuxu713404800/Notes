@@ -1,0 +1,166 @@
+1.获取镜像
+命令的格式为:docker [image] pull NAME [:TAG].
+例如获得一个Ubuntu18.04系统的基础镜像可以使用如下的命令
+$ docker pull ubuntu:18.04
+18.04: Pulling from library/ubuntu
+f476d66f5408: Pull complete
+8882c27f669e: Pull complete
+d9af21273955: Pull complete
+f5029279ec12: Pull complete
+Digest: sha256:d26d529daa4d8567167181d9d569f2a85da3c5ecaf539cace2c6223355d69981
+Status: Downloaded newer image for ubuntu:18.04
+对于Docker镜像来说，如果不显式指定TAG, 则默认会选择latest标签，这会下载仓库中最新版本的镜像。
+如果不显示指定镜像仓库服务器的情况下，Docker会从默认的注册服务器的仓库中下载。docker pull ubuntu:18.04实际上相当docker pull registry.hub.docker.com/ubuntu:18.04
+如果使用第三方镜像，需要显示指定仓库地址。如从网易蜂巢中获取ubuntu:18.04镜像，命令如下：docker pull hub.c.163.com/public/ubuntu:18.04
+下载镜像到本地后，即可随时使用该镜像了，例如利用该镜像创建一个容器，在其中运行bash应用:
+$ docker run -it ubuntu:18.04 bash
+root@7421a014091e:/# echo "Hello Docker"
+Hello Docker
+root@7421a014091e:/#
+
+2.查看镜像信息
+1) 可以使用docker images或docker image ls 命令可以列出本地主机上已有镜像的基本信息。
+docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              18.04               d131e0fa2585        8 days ago          102MB
+
+2) 使用tag命令可以为镜像添加新的标签
+$ docker tag ubuntu:18.04 myubuntu:18.04
+$ Docker docker image ls
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              18.04               d131e0fa2585        8 days ago          102MB
+myubuntu            18.04               d131e0fa2585        8 days ago          102MB
+可以看到，两个镜像的ID是一致的，它们实际上指向了同一个镜像文件，只是别名不同而已
+
+3) 使用inspect命令查看详细信息
+$ docker inspect ubuntu:18.04
+[
+    {
+        "Id": "sha256:d131e0fa2585a7efbfb187f70d648aa50e251d9d3b7031edf4730ca6154e221e",
+        "RepoTags": [
+            "myubuntu:18.04",
+            "ubuntu:18.04"
+        ],
+        "RepoDigests": [
+            "ubuntu@sha256:d26d529daa4d8567167181d9d569f2a85da3c5ecaf539cace2c6223355d69981"
+        ],
+        "Parent": "",
+        "Comment": "",
+        "Created": "2019-04-26T22:21:05.100534088Z",
+		...
+]
+对于返回的内容，如果只需要其中的一项的话，那么可以使用-f来指定：
+$ docker inspect -f {{.Created}} ubuntu:18.04
+2019-04-26T22:21:05.100534088Z
+
+4) 使用history命令查看镜像历史，该命令将列出各层的创建信息。
+$ docker history ubuntu:18.04
+IMAGE               CREATED             CREATED BY                                      SIZE                COMMENT
+d131e0fa2585        8 days ago          /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B
+<missing>           8 days ago          /bin/sh -c mkdir -p /run/systemd && echo 'do…   7B
+<missing>           8 days ago          /bin/sh -c rm -rf /var/lib/apt/lists/*          0B
+<missing>           8 days ago          /bin/sh -c set -xe   && echo '#!/bin/sh' > /…   745B
+<missing>           8 days ago          /bin/sh -c #(nop) ADD file:7ce84f13f11609a50…   102MB
+
+3.搜寻镜像
+语法为docker search [option] keyword。 支持的命令选项主要包括：
+-f, --filter filter: 过滤输出内容；
+--format string: 格式化输出内容；
+--limit int：限制输出结果个数， 默认为25个；
+--no-trunc: 不截断输出结果
+例如搜索官方提供的带ubuntu关键字的镜像:
+$ docker search --filter=is-official=true ubuntu
+NAME                 DESCRIPTION                                     STARS               OFFICIAL            AUTOMATED
+ubuntu               Ubuntu is a Debian-based Linux operating sys…   9487                [OK]
+ubuntu-upstart       Upstart is an event-based replacement for th…   97                  [OK]
+neurodebian          NeuroDebian provides neuroscience research s…   56                  [OK]
+ubuntu-debootstrap   debootstrap --variant=minbase --components=m…   40                  [OK]
+
+4.删除和清理镜像
+$ docker rmi myubuntu:18.04
+Untagged: myubuntu:18.04
+$ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              18.04               d131e0fa2585        9 days ago          102MB
+当镜像只剩下一个标签的时，再使用docker rmi命令会彻底删除镜像
+当使用docker rmi命令，并且后面跟上镜像的ID时，会先尝试删除所有指向该镜像的标签，然后删除该镜像文件本身。
+
+注意，当有该镜像创建的容器存在时，镜像文件默认是无法被删除的：
+$ docker run ubuntu:18.04
+$ docker rmi ubuntu:18.04
+Error response from daemon: conflict: unable to remove repository reference "ubuntu:18.04" (must force) - container 22c3ec8b7152 is using its referenced image d131e0fa2585
+
+此时应该先删除容器，然后删除镜像
+$ docker rm d131e0fa2585
+d131e0fa2585
+$ docker rmi ubuntu:18.04
+Untagged: ubuntu:18.04
+Untagged: ubuntu@sha256:d26d529daa4d8567167181d9d569f2a85da3c5ecaf539cace2c6223355d69981
+Deleted: sha256:d131e0fa2585a7efbfb187f70d648aa50e251d9d3b7031edf4730ca6154e221e
+Deleted: sha256:c59a62c2bba8db73ca8b8847baa7fa77e4d573f38e57d69592a9716f9fa075c4
+Deleted: sha256:a4eb6208f601c2f32e043972b9fa8e813767aef2e60676e91796cabf8a0afdc4
+Deleted: sha256:a14c708b62677e8acfb75ac873147e71dd26aa7bf75a8b63b3408e0826b174dc
+Deleted: sha256:604cbde1a4c8fee1b102f8b64d4f41e62d770b5f8a6b06fb809cfd873a2643c3
+
+使用Docker一段时间后，系统中可能会遗留一些临时的镜像文件，以及一些没有被使用的镜像，可以通过docker image prune命令来进行清理
+
+
+5.创建镜像
+1）基于已有容器创建
+docker [container] commit,提交时可以使用ID或名称来指定容器
+$ docker run -it ubuntu:18.04 /bin/bash
+root@db826a94e309:/# cd /home/
+root@db826a94e309:/home# mkdir test
+root@db826a94e309:/home# exit
+此时镜像已经发生变化
+$  docker  commit -m "add new folder" -a "Docker Newbee" db826a94e309
+sha256:fabee6865a1375bbb4c7fc49290b044ddbd71d152d70ea0850eae4d62d2cc10e
+$  Docker docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+<none>              <none>              fabee6865a13        15 seconds ago      102MB
+ubuntu              18.04               d131e0fa2585        9 days ago          102MB
+
+
+2) 基于本地模板导入
+首先可以从http://openvz.org/Download/templates/precreated上下载一个模板，比如centos-7-x86_64-minimal.tar.gz
+$ cat centos-7-x86_64-minimal.tar.gz|docker import - centos7-x86_64-minimal:lastest
+sha256:98b5455a0ba2086aadd0186112cced2ec1afc3983752d41b6026e275af5b25af
+$ docker images
+REPOSITORY               TAG                 IMAGE ID            CREATED             SIZE
+centos7-x86_64-minimal   lastest             98b5455a0ba2        21 seconds ago      435MB
+ubuntu                   18.04               d131e0fa2585        9 days ago          102MB
+
+3) 基于Dockerfile创建
+这是最常见的使用方式，以下是一个简单示例：
+首先建立一个文件夹，比如说叫Docker，然后进入这个目录执行下述操作：
+创建Dockerfile文件
+$ vim Dockerfile
+# FROM为接下来的构建指令指定基础镜像
+FROM centos7-x86_64-minimal:lastest
+# 维护者
+MAINTAINER wangwu
+# 执行按安装命令
+RUN yum install vim -y
+
+执行构建
+$ docker build -t centos:vim ./
+Sending build context to Docker daemon  145.6MB
+Step 1/3 : FROM centos7-x86_64-minimal:lastest
+......
+
+查看
+$ docker images
+REPOSITORY               TAG                 IMAGE ID            CREATED             SIZE
+centos                   vim                 9e0d693f6152        9 minutes ago       546MB
+centos7-x86_64-minimal   lastest             98b5455a0ba2        25 minutes ago      435MB
+ubuntu                   18.04               d131e0fa2585        9 days ago          102MB
+
+
+6.存出和载入镜像
+1) 导出镜像
+$ docker save -o ubuntu_18.04.tar ubuntu:18.04
+$ ls
+Dockerfile                     ubuntu_18.04.tar
+
+2) 导入镜像
+docker load -i ubuntu_18.04.tar
