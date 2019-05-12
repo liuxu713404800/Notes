@@ -58,3 +58,70 @@ def3cfa8a671
 $ docker exec -it def3cfa8a671 /bin/bash
 root@def3cfa8a671:/#
 这种方式可以在不影响容器内其他应用的前提下，用户可以与容器进行交互。
+
+
+4.删除容器
+默认情况下，docker rm 命令只能删除已经处于终止或退出状态的容器，并不能删除还处于运行状态的容器。
+如果要直接删除一个运行中的容器，可以添加-f参数。Docker会先发送SIGKILL信号给容器，终止其中的应用，之后强行删除。
+$ docker ps -a
+CONTAINER ID        IMAGE                            COMMAND                  CREATED             STATUS                      PORTS               NAMES
+1f37ee503732        centos7-x86_64-minimal:lastest   "/bin/bash"              2 days ago          Exited (0) 2 days ago                           wonderful_sanderson
+db826a94e309        ubuntu:18.04                     "/bin/bash"              2 days ago          Exited (0) 2 days ago                           affectionate_williams
+$ docker rm 1f37ee503732 db826a94e309
+1f37ee503732
+db826a94e309
+
+5.导入导出容器
+分别用import和export进行容器的导入与导出
+导出
+$ docker ps -a
+CONTAINER ID        IMAGE                   COMMAND                  CREATED             STATUS                      PORTS               NAMES
+c4dfdbf1e496        ubuntu:18.04            "/bin/bash"              4 seconds ago       Created                                         serene_varahamihira
+$ docker export -o  ububtu:18.04.tar  c4dfdbf1e496
+$ ls
+ububtu:18.04.tar
+
+导入
+$ docker import ububtu:18.04.tar -m "test"
+sha256:cb594bafb50d555316312eb1be1692351ceb0366e1c28bddd0c3d7db64ae5a8c
+$ docker images
+REPOSITORY               TAG                 IMAGE ID            CREATED              SIZE
+<none>                   <none>              cb594bafb50d        21 seconds ago       81.5MB
+centos7-x86_64-minimal   lastest             98b5455a0ba2        2 days ago           435MB
+
+
+6.查看容器
+查看容器详情 inspect
+docker ps -a
+CONTAINER ID        IMAGE                   COMMAND                  CREATED             STATUS                      PORTS               NAMES
+c4dfdbf1e496        ubuntu:18.04            "/bin/bash"              16 minutes ago      Created                                         serene_varahamihira
+$ docker container inspect  c4dfdbf1e496
+[
+    {
+        "Id": "c4dfdbf1e49674ebecf5f12036cd17d97e8a87b5adbaa79d11abc469a3cd9ad1",
+        "Created": "2019-05-09T01:45:14.53501435Z",
+        "Path": "/bin/bash",
+        "Args": [],
+		...
+	},
+	...
+}
+
+查看容器内进程 top
+$ docker start c4dfdbf1e496
+c4dfdbf1e496
+$ docker top c4dfdbf1e496
+PID                 USER                TIME                COMMAND
+2375                root                0:00                /bin/bash
+如果容器未运行，那么top命令会返回error
+$ docker stop c4dfdbf1e496
+c4dfdbf1e496
+$ docker top c4dfdbf1e496
+Error response from daemon: Container c4dfdbf1e49674ebecf5f12036cd17d97e8a87b5adbaa79d11abc469a3cd9ad1 is not running
+
+查看统计信息 stats
+$ docker stats c4dfdbf1e496
+CONTAINER ID        NAME                  CPU %               MEM USAGE / LIMIT   MEM %               NET I/O             BLOCK I/O           PIDS
+c4dfdbf1e496        serene_varahamihira   0.00%               708KiB / 1.952GiB   0.03%               828B / 0B           0B / 0B             1
+
+
