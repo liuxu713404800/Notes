@@ -1,0 +1,46 @@
+1.容器中管理数据的方式
+1)数据卷(Data Volumes):容器内数据直接映射到本地主机环境；
+2)数据卷容器(Data Volume Containers):使用特定容器维护数据卷。
+
+2.数据卷的特性
+数据卷(Data Volumes)是一个可供容器使用的特殊目录，它将主机操作系统目录直接映射进容器，类似于Linux中的mount行为。
+数据卷有以下的特性：
+1)数据卷可以在容器之间共享和重用，容器间传递数据将变得高效与方便；
+2)对数据卷内数据的修改会立马生效，无论是容器内操作还是本地操作；
+3)对数据卷的更新不会影响镜像，解摘开应用和数据；
+4)卷会一直存在 ，直到没有容器使用，可以安全地卸载它。
+
+3.Docker 提供了 volume子命令来管理数据卷
+1)查看数据数据卷 ls
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               6dc370cc71d761133c6722b3a62bfb6886a4e48dc94d6aa06c0feb0b8b5ecbf6
+
+2)查看详情 inspect
+$  docker volume inspect 6dc370cc71d761133c6722b3a62bfb6886a4e48dc94d6aa06c0feb0b8b5ecbf6
+[
+    {
+        "CreatedAt": "2019-05-13T01:13:14Z",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/6dc370cc71d761133c6722b3a62bfb6886a4e48dc94d6aa06c0feb0b8b5ecbf6/_data",
+        "Name": "6dc370cc71d761133c6722b3a62bfb6886a4e48dc94d6aa06c0feb0b8b5ecbf6",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+
+3)创建数据卷 create
+$ docker volume create -d local test
+test
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               6dc370cc71d761133c6722b3a62bfb6886a4e48dc94d6aa06c0feb0b8b5ecbf6
+local               test
+
+4)删除数据卷 rm
+$ docker volume rm test
+test
+$ docker volume ls
+DRIVER              VOLUME NAME
+local               6dc370cc71d761133c6722b3a62bfb6886a4e48dc94d6aa06c0feb0b8b5ecbf6

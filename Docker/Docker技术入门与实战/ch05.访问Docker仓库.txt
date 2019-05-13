@@ -4,6 +4,11 @@
 Docker Hub是Docker官方提供的最大的公共镜像仓库，目前包括了超过100000的镜像，地址为 https://hub.docker.com。
 国内的镜像仓库有，腾讯云、网易云、阿里云等等，使用方式与Docker Hub类似，使用时
 注册后，本地可以通过docker login来输入用户名、密码和邮箱来完成注册和登录。注册成功后，本地用户目录下会自动创建.docker/config.json文件，保存用户的认证信息。
+$ docker login
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: xxxxxxx
+Password:
+Login Succeeded
 $ pwd
 /Users/xxxxx/.docker
 $ ls
@@ -27,5 +32,15 @@ config.json daemon.json
 
 3.搭建本地私有仓库
 $ docker run -d -p 5000:5000 registry:2
+Unable to find image 'registry:2' locally
+2: Pulling from library/registry
+c87736221ed0: Pull complete
+1cc8e0bb44df: Pull complete
+54d33bcb37f5: Pull complete
+e8afc091c171: Pull complete
+b4541f6d3db6: Pull complete
+Digest: sha256:77a8fb00c00b99568772a70f0863f6192ff2635e4af4e22e4d9c622edeb5f2de
+Status: Downloaded newer image for registry:2
+e80d9392125ce94aa238204c33d0601acb235ffb2f5cb45fb613be13df8acbe9
 这将自动下载井启动一个register容器，创建本地的私有仓库服务。
 假如说当前的服务器的地址是10.1.1.1，那么直接将这个ip作为仓库的注册服务器就好了。
