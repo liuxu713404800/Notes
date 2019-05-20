@@ -1,0 +1,26 @@
+1.从外部访问容器应用
+在启动容器的时候,如果不指定对应参数，在容器外部是无法通过网络来访问容器内的网络应用和服务的。
+当容器中运行一些网络应用，要让外部访问这些应用时，可以通过-P或-p参数来指定端口映射。
+-P,Docker会随机映射一个（很多资料说是49000-49900？这个地方是有待商榷的，实验的结果范围是要大于给定阈值的）端口到内部容器开放的网络端口：
+$ docker run -d -P winstonpro/lnmp php test.php
+a0173a8fc26879919cddfb80ca7077d6eedd6ae6b5d74b8e72089f2b225d839a
+$ docker ps -l
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                                                                                                                             NAMES
+a0173a8fc268        winstonpro/lnmp     "/usr/local/bin/entr…"   26 seconds ago      Up 25 seconds       0.0.0.0:32773->22/tcp, 0.0.0.0:32772->80/tcp, 0.0.0.0:32771->443/tcp, 0.0.0.0:32770->3306/tcp, 0.0.0.0:32769->8080/tcp, 0.0.0.0:32768->8989/tcp   brave_leakey
+
+-p则可以指定要映射的端口
+支持的格式为：
+1）IP:HostPort:ContainerPort，指定地址的指定端口
+$ docker run -d -p 127.0.0.1:5000:5000 golango go HelloWord.go 
+2）IP::ContainerPort 映射到指定地址的任意端口
+$ docker run -d -p 127.0.0.1::5000 golango go HelloWord.go 
+3）HostPort:ContainerPort
+$ docker run -d -p 8000:8000 golango go HelloWord.go 
+
+
+2.互联机制实现便捷互访
+容器的互联(linking)是一种让多个容器中的应用进行快速交互的方式。它会在源和接收容器之间创建连接关系，接收容器可以通过容器名快速访问到源容器，而不用指定具体的IP地址。
+比如说golang应用要链接mysql数据库
+$ docker run -d -P --name container1 --link contaner2:contaner2_alias golang go HelloWorld.go
+                           新容器名称         要被链接的容器名称:别名
+						  	golang			  mysql:mysql_alias

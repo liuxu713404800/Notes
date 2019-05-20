@@ -44,3 +44,43 @@ test
 $ docker volume ls
 DRIVER              VOLUME NAME
 local               6dc370cc71d761133c6722b3a62bfb6886a4e48dc94d6aa06c0feb0b8b5ecbf6
+
+
+4.绑定数据卷
+除了使用volume子命令来管理数据卷外，还可以在创建容器时将主机本地的任意路径挂载到容器内作为数据卷，这种形式创建的数据卷称为绑定数据卷。
+在使用run命令的时候，可以使用-mount选项来使用数据卷。-mount选项支持三种类型的数据卷，包括：
+volume:普通数据卷，映射到主机/var/lib/docker/volumes路径下；
+bind:绑定数据卷，映射到主机指定路径下；
+tmpfs:临时数据卷，只存在于内存中。
+$ docker run -d -it --name test --mount type=bind,source=/tmp,destination=/Users/XXXX/Project/Docker ubuntu:latest
+635104761bb2d9a1c2b5fd02e39ed10269345930a704493de686d63c8786ccb0
+
+5.数据卷容器
+如果用户需要在多个容器之间共享一些持续更新的数据，最简单的方式是使用数据卷容器。数据卷容器也是一个容器，但是它的目的是专门提供数据卷给其他容器挂载。
+$ docker run -it -v /dbdata --name dbdata ubuntu
+root@13f7e55a999a:/# ls
+bin  boot  dbdata  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@13f7e55a999a:/#
+此时分别从其余两个容器进入来查看情况
+$ docker run -it --volumes-from dbdata --name db1 ubuntu
+root@11a8ad053b23:/# ls
+bin  boot  dbdata  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@11a8ad053b23:/# exit
+exit
+$ docker run -it --volumes-from dbdata --name db2 ubuntu
+root@db1bde90aec8:/# ls
+bin  boot  dbdata  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@db1bde90aec8:/# exit
+exit
+数据是一致的。
+
+如果删除了挂载的容器（包括dbdata、db1和db2),数据卷并不会被自动删除。 如果要删除一个数据卷，必须在删除最后一个还挂载着它的容器时显式使用docker rm -v命令来指定同时删除关联的容器。
+
+6.利用数据卷进行备份、恢复，实现数据迁移
+1）数据备份
+$ docker run -volumes-from dbdata -v $(pwd):/backup --name worker ubuntu tar cvf backup.tar /dbdata
+2）数据恢复
+首先创建一个有数据卷的容器
+$ docker run -v /dbdata --name dbdata2 ubuntu /bin/bash
+然后然后创建另一个新的容器，挂载dbdata2 的容器，并使用 untar 解压备份文件到所挂载的容器卷中：
+$ docker run --volumes-from dbdata2 -v $(pwd):/backup busybox tar xvf backup.tar
