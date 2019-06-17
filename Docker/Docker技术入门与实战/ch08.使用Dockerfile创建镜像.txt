@@ -1,0 +1,45 @@
+1.Dockerfile介绍
+Dockerfile是一个文本格式的配置文件，用户可以使用Dockerfile来快速创建自定义的镜像。
+一般而言，Dockerfile主体内容分为四部分：基础镜像信息、维护者信息、镜像操作指令和容器启动时执行指令。
+SIMPLE：
+# escape=\(backslash)
+# This dockerfile uses the ubuntu:xeniel image
+# VERSION 2 - EDITION 1
+# Author: docker_user
+# Command format: Instruction [arguments / command]
+# Base image to use, this must be set as the first line
+FROM ubuntu:xeniel
+＃ Maintainer: docker user <docker_user at email.com> (@docker user)
+LABEL maintainer docker_user<docker_user@email.com>
+# Commands to update the image
+RUN echo "deb http://archive.ubuntu.com/ubuntu/ xeniel main universe" >> /etc/apt/sources.list
+RUN apt-get update && apt-get install -y nginx
+RUN echo "\ndaernon off;" >> /etc/nginx/nginx.conf
+# Commands when creating a new container
+CMD /usr/sbin/nginx
+
+2.debian:jessie基础镜像安装Nginx环境
+FROM debian:jessie
+
+LABEL maintainer docker_user<docker_user@email.com>
+
+ENV NGINX VERSION 1.10.1-1-jessie
+
+RUN apt-key adv --keyserver hkp://pgp.mit.edu:80 --recv-keys 573BFD6B3DBFBC641079A6ABABF5BDB27BD9BF62 \
+	&& echo "deb http://nginx.org/packages/debian/ jessie nginx" >> /etc/apt/sources.list \
+	&& apt-get update \
+	&& apt-get install --no-install-recommends --no-install-suggests -y \
+	&& ca-certificates \
+	nginx=${NGINX_VERSION} \
+	nginx-module-xslt \
+	nginx-module-geoip \
+	nginx-module-image-filter \
+	nginx-module-perl \
+	nginx-module-njs \
+	gettext-base \
+	&& rm -rf /var/lib/apt/lists/*
+# forward request and error logs to docker log callector
+RUN ln -sf /dev/stdout /var/log/nginx/access.log \
+&& ln -sf /dev/stderr /var/log/nginx/error.log
+EXPOSE 80 443
+CMD ["nginx", "-g", "daemon off;")
